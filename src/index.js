@@ -1,177 +1,135 @@
 class SmartCalculator {
   constructor(initialValue) {
-    this.result = initialValue; 
-    this.startVal = initialValue;
-    this.history = []; 
-    this.polishArr = [];
-    this.operations = [];
-    this.priority = { "add": 0,
-                      "subtract": 0,
-                      "multiply": 1,
-                      "devide": 1,
-                      "pow": 2 };
-    this.isPrevPowEqualOne = false;
-    
+    this.operatorsStack = [];
+    this.exitStringStack = [initialValue];
+    this.rusult;
+    this.operatorsPriority = {
+      add: 0,
+      subtract: 0,
+      multiply: 1,
+      devide: 1,
+      pow: 2
+    }
+    this.operators = {
+      add: "add",
+      subtract: "subtract",
+      multiply: "multiply",
+      devide: "devide",
+      pow: "pow"
+    }
   }
 
-  writePolishArr() {
+  operation(leftoperand, rightoperand, operator) {
 
-    this.polishArr.push(this.startVal);
+    if(operator === "add") {
 
-    for (var i = 0; i< this.history.length; i++) {
+      let result = leftoperand + rightoperand;
+      return result;
+    }
+    if(operator === "subtract") {
 
-      if(typeof(this.history[i]) === "number") {
-        this.polishArr.push(this.history[i]);
+      let result = leftoperand - rightoperand;
+      return result;
+    }
+    if(operator === "multiply") {
 
-      } else if(typeof(this.history[i]) === "string") {
-        
-        var  currOperand = this.history[i];
-        var currPriority = this.priority[currOperand];
-        
-        if(this.operations.length ==  0) {
-          this.operations.push(currOperand);
+      let result = leftoperand * rightoperand;
+      return result;
+    }
+    if(operator === "devide") {
 
-        } else {
+      let result = leftoperand / rightoperand;
+      return result;
+    }
+    if(operator === "pow") {
 
-          var  prevOperand = this.operations[this.operations.length - 1]; 
-          var prevPriority = this.priority[prevOperand]; 
-          
-          if(currPriority > prevPriority) {
-            this.operations.push(currOperand);
+      let result = Math.pow(leftoperand , rightoperand);
+      return result;
+    }
+  }
 
-          } else {
+  polishScript(number, fn) {
 
-            while(currPriority <= this.priority[this.operations[this.operations.length - 1]] && this.operations[0]) {
-              var repush = this.operations.pop(); 
-              this.polishArr.push(repush);
-            }
-            this.operations.push(currOperand);
-          }
+    if(this.operatorsStack.length != 0) {
+
+      let lastOperator = this.operatorsStack[this.operatorsStack.length - 1];
+      let lastOperatorPriority = eval("this.operatorsPriority." + lastOperator);
+      let innerOperatorPriority = eval("this.operatorsPriority." + fn);
+
+      if(lastOperatorPriority != 2 || innerOperatorPriority != 2) {
+        while(this.operatorsStack.length != 0 
+              && lastOperatorPriority >= innerOperatorPriority) {
+
+          let operator = this.operatorsStack.pop();
+          this.exitStringStack.push(operator);
+
+          lastOperator = this.operatorsStack[this.operatorsStack.length - 1];
+          lastOperatorPriority = eval("this.operatorsPriority." + lastOperator);
         }
-      }
-      if( i === this.history.length -1) {
-
-        while(this.operations[0]) {
-          var rePush = this.operations.pop();
-          this.polishArr.push(rePush);
-        }
-      }
+      } 
     }
-    return this;
+
+    this.operatorsStack.push(fn);
+    this.exitStringStack.push(number);
   }
 
-  calculPolishArr () {
-    var resStack = [];
-    for(var i = 0; i < this.polishArr.length; i++) {
-      if(typeof this.polishArr[i] === "number") {
-        resStack.push(this.polishArr[i]);
+  calculatePolishString() {
+
+    let polishString = this.exitStringStack.slice();
+
+    while(this.operatorsStack.length != 0) {
+      let operator = this.operatorsStack.pop();
+      polishString.push(operator);
+    }
+
+    let i = 0;
+    while(polishString.length != 1 || polishString.length < i) {
+
+      let elem = polishString[i];
+      if (typeof elem === "number") {
+
+        i++;
+      } else {
+
+        let operandLeft = polishString[i - 2];
+        let operandRignt = polishString[i - 1];
+        let result = this.operation(operandLeft, operandRignt, elem);
+        polishString.splice(i - 2, 3, result);
+        i -= 2;
       }
-      if(typeof this.polishArr[i] === "string") {
-        var secondVal = resStack.pop();
-        var firstVal = resStack.pop();
-        var putToStack = this.calcul(this.polishArr[i], firstVal, secondVal);
-        resStack.push(putToStack);
-      }
     }
-    var res = resStack.pop();
 
-    this.result = res;
-    console.log(this.polishArr); 
-    this.polishArr = [];
-    if(typeof res === "number") {
-      return res;
-    }else {
-      return new Error ("invalid result of calculation calculPolishArr function");
-    }
-  }
-
-  calcul(type, firstVal, secondVal) {
-
-    var res;
-    if(type === 'add') {
-      res = secondVal + firstVal;
-    }
-    if(type === 'subtract') {
-      res = firstVal-secondVal;
-    }
-    if(type === 'multiply') {
-      res = firstVal*secondVal;
-    }
-    if(type === 'devide') {
-      res = firstVal/secondVal;
-    }
-    if(type === 'pow') {
-      res = Math.pow(firstVal,secondVal);
-    }
-    
-    return res;
+    return polishString[0];
   }
 
   valueOf() { 
+    this.result = this.calculatePolishString();
     return this.result; 
   }
   add(number) { 
-
-    this.isPrevPowEqualOne = false;
-    this.history.push("add");
-    this.history.push(number);
-    var resArr = this.writePolishArr();
-    var resVal = this.calculPolishArr();
-
+    this.polishScript(number, "add");
     return this;
   }
   
   subtract(number) { 
-
-    this.isPrevPowEqualOne = false;
-    this.history.push("subtract");
-    this.history.push(number);
-    var resArr = this.writePolishArr();
-    var resVal = this.calculPolishArr();
-
+    this.polishScript(number, "subtract");
      return this;
   }
 
   multiply(number) { 
-
-    this.isPrevPowEqualOne = false;
-    /*if(number === 1) {
-      return this;
-    }*/
-    this.history.push("multiply");
-    this.history.push(number);
-    var resArr = this.writePolishArr();
-    var resVal = this.calculPolishArr();
-
+    this.polishScript(number, "multiply");
     return this;
   }
 
   devide(number) {
-
-    this.isPrevPowEqualOne = false;
-    /*if(number === 1 && this.result != 0) {
-      return this;
-    }*/
-    this.history.push("devide");
-    this.history.push(number);
-    var resArr = this.writePolishArr();
-    var resVal = this.calculPolishArr();
-
+    this.polishScript(number, "devide");
     return this;
   }
 
   pow(number) { 
-
-    if(number === 1 || this.isPrevPowEqualOne) {
-      this.isPrevPowEqualOne = true;
-      return this;
-    }
-    this.history.push("pow");
-    this.history.push(number);
-    var resArr = this.writePolishArr();
-    var resVal = this.calculPolishArr();
-
+    this.polishScript(number, "pow");
     return this;
   }
 }
 module.exports = SmartCalculator;
+
